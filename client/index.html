@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Downloader</title>
+  <style>
+    /* Base & Reset */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      user-select: none;
+    }
+
+    h1 {
+      font-weight: 800;
+      font-size: 3rem;
+      margin-bottom: 30px;
+      color: #bbdefb;
+      text-shadow:
+        1px 1px 3px rgba(255, 255, 255, 0.1),
+        -1px -1px 3px rgba(0, 0, 0, 0.8);
+      user-select: none;
+    }
+
+    /* Neumorphic inputs and buttons */
+    input[type="text"], button {
+      width: 80%;
+      max-width: 480px;
+      padding: 14px 20px;
+      margin: 10px auto;
+      border-radius: 20px;
+      border: none;
+      outline: none;
+      font-size: 1.1rem;
+      background: #1e1e1e;
+      box-shadow:
+        8px 8px 15px #0a0a0a,
+        -8px -8px 15px #2c2c2c;
+      color: #e0e0e0;
+      transition:
+        box-shadow 0.3s ease,
+        transform 0.15s ease;
+      user-select: text;
+      display: block;
+    }
+
+    input[type="text"]:focus {
+      box-shadow:
+        inset 6px 6px 12px #0a0a0a,
+        inset -6px -6px 12px #2c2c2c;
+      color: #bbdefb;
+      transform: scale(1.02);
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow:
+        8px 8px 15px #0a0a0a,
+        -8px -8px 15px #2c2c2c;
+      color: #bbdefb;
+      background: #121212;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button:hover {
+      box-shadow:
+        4px 4px 10px #0a0a0a,
+        -4px -4px 10px #2c2c2c,
+        0 0 10px #bbdefb;
+      color: #e3f2fd;
+      transform: scale(1.05);
+    }
+
+    button:active {
+      transform: scale(0.97);
+      box-shadow:
+        inset 4px 4px 6px #0a0a0a,
+        inset -4px -4px 6px #2c2c2c;
+      color: #90caf9;
+    }
+
+    /* Ad and result container */
+    #ads, #result {
+      width: 80%;
+      max-width: 480px;
+      margin-top: 30px;
+      background: #1e1e1e;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow:
+        8px 8px 15px #0a0a0a,
+        -8px -8px 15px #2c2c2c;
+      color: #90caf9;
+      font-size: 1.2rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      animation-fill-mode: forwards;
+      user-select: none;
+    }
+
+    /* Fade animations */
+    .fade-in {
+      animation: fadeIn 0.6s ease forwards;
+    }
+    .fade-out {
+      animation: fadeOut 0.4s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(10px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    @keyframes fadeOut {
+      from {opacity: 1; transform: translateY(0);}
+      to {opacity: 0; transform: translateY(10px);}
+    }
+
+    /* Result button inside link */
+    #result a button {
+      width: auto;
+      padding: 12px 36px;
+      font-weight: 700;
+      color: #121212;
+      background: #90caf9;
+      border-radius: 20px;
+      box-shadow:
+        5px 5px 15px #5d8fc2,
+        -5px -5px 15px #c1d9fc;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+
+    #result a button:hover {
+      background: #64b5f6;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>🎬 Grab Video</h1>
+
+  <input type="text" id="videoUrl" placeholder="Paste YouTube or Instagram URL here" autocomplete="off" />
+  <button onclick="getDownloadLink()">Get Download Link</button>
+
+  <div id="ads" class="fade-in">
+    <p>Ad: 🤝 Thanks for supporting us!</p>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    const adsDiv = document.getElementById('ads');
+    const resultDiv = document.getElementById('result');
+
+    function fadeOutIn(element, newContent, duration = 600) {
+      element.classList.remove('fade-in');
+      element.classList.add('fade-out');
+
+      setTimeout(() => {
+        element.innerHTML = newContent;
+        element.classList.remove('fade-out');
+        element.classList.add('fade-in');
+      }, duration);
+    }
+
+    function getDownloadLink() {
+      const url = document.getElementById('videoUrl').value.trim();
+      if (!url) {
+        alert('Please paste a URL');
+        return;
+      }
+
+      fadeOutIn(adsDiv, '<p>📢 Ad: Please wait few seconds...</p>');
+
+      setTimeout(() => {
+        fetch('http://localhost:4000/api/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.downloadUrl) {
+            const fullUrl = `http://localhost:4000${data.downloadUrl}`;
+            fadeOutIn(adsDiv, '<p>🎉 Download ready! Click below.</p>');
+            resultDiv.innerHTML = `
+              <p style="color:#90caf9; font-weight: 700; margin-bottom: 10px;">Download Ready</p>
+              <a href="${fullUrl}" onclick="return showFinalAd()" download>
+                <button>Download Now</button>
+              </a>
+            `;
+            resultDiv.classList.add('fade-in');
+          } else {
+            fadeOutIn(adsDiv, '<p style="color:#f44336;">❌ Download failed!</p>');
+            resultDiv.innerHTML = '';
+          }
+        })
+        .catch(() => {
+          fadeOutIn(adsDiv, '<p style="color:#f44336;">❌ Server error!</p>');
+          resultDiv.innerHTML = '';
+        });
+      }, 3000);
+    }
+
+    function showFinalAd() {
+      alert('📺 Showing ad before download!');
+      return true; // allow download
+    }
+  </script>
+</body>
+</html>
