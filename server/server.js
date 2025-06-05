@@ -75,4 +75,7 @@ app.post('/api/download', (req, res) => {
 app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
