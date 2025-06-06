@@ -11,6 +11,8 @@ app.use(express.json());
 const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
 if (!fs.existsSync(DOWNLOADS_DIR)) fs.mkdirSync(DOWNLOADS_DIR);
 
+const BASE_URL = 'https://video-downloader-app-2h3c.onrender.com';
+
 app.post('/api/download', (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
@@ -32,7 +34,6 @@ app.post('/api/download', (req, res) => {
     const instaFolder = path.join(DOWNLOADS_DIR, `insta_${timestamp}`);
     if (!fs.existsSync(instaFolder)) fs.mkdirSync(instaFolder);
 
-    // FINAL CORRECT COMMAND
     command = `instaloader --sessionfile server/insta-session.txt --no-metadata-json --no-compress-json --no-captions --dirname-pattern "${instaFolder}" --filename-pattern "video" -- -${shortcode}`;
   } else {
     return res.status(400).json({ error: 'Unsupported URL' });
@@ -65,9 +66,9 @@ app.post('/api/download', (req, res) => {
       fs.renameSync(path.join(fullInstaPath, videoFile), finalPath);
       fs.rmSync(fullInstaPath, { recursive: true, force: true });
 
-      return res.json({ downloadUrl: `/downloads/${filename}` });
+      return res.json({ downloadUrl: `${BASE_URL}/downloads/${filename}` });
     } else {
-      return res.json({ downloadUrl: `/downloads/${filename}` });
+      return res.json({ downloadUrl: `${BASE_URL}/downloads/${filename}` });
     }
   });
 });
@@ -75,7 +76,6 @@ app.post('/api/download', (req, res) => {
 app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 const PORT = process.env.PORT || 4000;
-
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
