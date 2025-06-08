@@ -12,6 +12,14 @@ const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
 if (!fs.existsSync(DOWNLOADS_DIR)) fs.mkdirSync(DOWNLOADS_DIR);
 
 const BASE_URL = 'https://video-downloader-app-2h3c.onrender.com';
+const COOKIES_PATH = path.join(__dirname, 'cookies.txt');
+const SESSION_PATH = path.join(__dirname, 'insta-session.txt');
+
+// Convert to Android-safe MP4 using FFmpeg
+function convertToAndroidMP4(inputPath, outputPath, callback) {
+  const cmd = `ffmpeg -i "${inputPath}" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k "${outputPath}"`;
+  exec(cmd, callback);
+}
 
 app.post('/api/download', (req, res) => {
   const { url } = req.body;
@@ -24,7 +32,7 @@ app.post('/api/download', (req, res) => {
 
   // --- YouTube ---
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    command = `yt-dlp --no-playlist --cookies server/cookies.txt --remux-video mp4 -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" -o "${filepath}" "${url}"`;
+    command = `yt-dlp --no-playlist --cookies "${COOKIES_PATH}" --remux-video mp4 -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" -o "${filepath}" "${url}"`;
   }
 
   // --- Instagram ---
@@ -37,7 +45,7 @@ app.post('/api/download', (req, res) => {
     const instaFolder = path.join(DOWNLOADS_DIR, `insta_${timestamp}`);
     if (!fs.existsSync(instaFolder)) fs.mkdirSync(instaFolder);
 
-    command = `instaloader --sessionfile server/insta-session.txt --no-metadata-json --no-compress-json --no-captions --dirname-pattern "${instaFolder}" --filename-pattern "video" -- -${shortcode}`;
+    command = `instaloader --sessionfile "${SESSION_PATH}" --no-metadata-json --no-compress-json --no-captions --dirname-pattern "${instaFolder}" --filename-pattern "video" -- -${shortcode}`;
   }
 
   else {
@@ -65,26 +73,35 @@ app.post('/api/download', (req, res) => {
 
       const fullInstaPath = path.join(DOWNLOADS_DIR, instaFolderName);
       const videoFile = fs.readdirSync(fullInstaPath).find(f => f.endsWith('.mp4'));
-
       if (!videoFile) return res.status(500).json({ error: 'No video found after Instagram download' });
 
+      const originalPath = path.join(fullInstaPath, videoFile);
       const finalPath = path.join(DOWNLOADS_DIR, filename);
-      fs.renameSync(path.join(fullInstaPath, videoFile), finalPath);
-      fs.rmSync(fullInstaPath, { recursive: true, force: true });
 
-      return res.json({ downloadUrl: `${BASE_URL}/downloads/${filename}` });
+      // Convert to Android-compatible format
+      convertToAndroidMP4(originalPath, finalPath, (ffmpegErr) => {
+        if (ffmpegErr) {
+          console.error('❌ FFmpeg Error:', ffmpegErr.message);
+          return res.status(500).json({ error: 'Video conversion failed', details: ffmpegErr.message });
+        }
+
+        fs.rmSync(fullInstaPath, { recursive: true, force: true });
+        return res.json({ downloadUrl: `${BASE_URL}/downloads/${filename}` });
+      });
+
     } else {
+      // YouTube: return final URL directly
       return res.json({ downloadUrl: `${BASE_URL}/downloads/${filename}` });
     }
   });
 });
 
-// Serve static files with correct headers
+// Force download with correct headers
 app.get('/downloads/:file', (req, res) => {
   const file = req.params.file;
   const filePath = path.join(DOWNLOADS_DIR, file);
   if (fs.existsSync(filePath)) {
-    res.download(filePath); // Force download
+    res.download(filePath); // force browser to download
   } else {
     res.status(404).send('File not found');
   }
