@@ -28,7 +28,13 @@ function App() {
 
     try {
       setLoading(true);
-      const res = await axios.post("https://video-downloader-app-2h3c.onrender.com/api/download", { url });
+
+      // 🔁 REPLACE WITH YOUR ACTUAL NGROK HTTPS LINK
+      const res = await axios.post(
+        "https://6fdd-2409-40e3-4031-9737-31a1-f39-bafb-bda1.ngrok-free.app/api/download",
+        { url }
+      );
+
       setLoading(false);
 
       if (res.data.downloadUrl) {
